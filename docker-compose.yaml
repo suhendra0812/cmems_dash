@@ -7,8 +7,8 @@ services:
     restart: always
     build: ./dash_app
     ports:
-      - "8000:8000"
-    command: gunicorn -w 1 -b :8000 app:server
+      - "8050:8050"
+    command: gunicorn -w 3 -b :8050 app:server
 
 
   nginx:

@@ -72,8 +72,8 @@ DEFAULT_WMS_URL = param_df.loc[DEFAULT_ID, "wms_url"]
 DEFAULT_OPENDAP_URL = param_df.loc[DEFAULT_ID, "opendap_url"]
 DEFAULT_VALUE_RANGE = list(map(int, param_df.loc[DEFAULT_ID, "value_range"].split(",")))
 
-TILE_URL = "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
-TILE_ATTRIBUTION = '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> '
+TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 
 TODAY = datetime.today()
 
@@ -189,6 +189,62 @@ menu_layout = html.Div(
                     step=0.1,
                     value=1,
                     marks={0: "0", 0.5: "0.5", 1: "1"},
+                ),
+            ],
+        ),
+        html.Div(
+            className="download_box",
+            children=[
+                html.H3("Download"),
+                html.Div(
+                    className="download_menu",
+                    children=[
+                        html.H5("Bounding Box"),
+                        html.Div(
+                            className="bounding_box",
+                            children=[
+                                html.Div(
+                                    className="ymax_box",
+                                    children=[
+                                        dcc.Input(
+                                            id="ymax",
+                                            type="number",
+                                            value=0,
+                                            step=0.001,
+                                        ),
+                                    ],
+                                ),
+                                html.Div(
+                                    className="x_box",
+                                    children=[
+                                        dcc.Input(
+                                            id="xmin",
+                                            type="number",
+                                            value=0,
+                                            step=0.001,
+                                        ),
+                                        dcc.Input(
+                                            id="xmax",
+                                            type="number",
+                                            value=0,
+                                            step=0.001,
+                                        ),
+                                    ],
+                                ),
+                                html.Div(
+                                    className="ymin_box",
+                                    children=[
+                                        dcc.Input(
+                                            id="ymin",
+                                            type="number",
+                                            value=0,
+                                            step=0.001,
+                                        ),
+                                    ],
+                                ),
+                            ],
+                        ),
+                    ],
                 ),
             ],
         ),
@@ -452,6 +508,23 @@ def update_values(param, temporal):
         {"display": depth_display},
     )
 
+@app.callback(
+    [
+        Output("xmin", "value"),
+        Output("xmax", "value"),
+        Output("ymin", "value"),
+        Output("ymax", "value"),
+    ],
+    [Input("map", "bounds")],
+)
+def get_bounds(bounds):
+    ((ymin, xmin), (ymax, xmax)) = bounds
+    xmin = round(xmin, 3)
+    xmax = round(xmax, 3)
+    ymin = round(ymin, 3)
+    ymax = round(ymax, 3)
+    return (xmin, xmax, ymin, ymax)
+
 
 app.layout = html.Div(
     style={"display": "grid", "width": "100%", "height": "100vh"},
@@ -459,4 +532,4 @@ app.layout = html.Div(
 )
 
 if __name__ == "__main__":
-    app.run_server()
+    app.run_server(debug=True)
