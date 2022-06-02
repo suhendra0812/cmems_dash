@@ -114,7 +114,7 @@ menu_layout = html.Div(
                     options=[
                         {"value": p, "label": a}
                         for p, a in zip(
-                            param_df.parameter.unique(), param_df.alias.unique()
+                            param_df.parameter.unique(), param_df.title.unique()
                         )
                     ],
                     value=DEFAULT_PARAM,
