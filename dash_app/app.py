@@ -3,12 +3,33 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from dash import Dash, Input, Output, html, dcc
 import dash_leaflet as dl
-from flask import Flask
 from owslib.wms import WebMapService
 import numpy as np
 import pandas as pd
 from lxml import etree
 from shapely.geometry import Point
+
+
+app = Dash(
+    __name__,
+    meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
+    suppress_callback_exceptions=True,
+)
+
+
+param_df = pd.read_csv("data/sources.csv")
+
+DEFAULT_ID = 0
+DEFAULT_PARAM = param_df.loc[DEFAULT_ID, "parameter"]
+DEFAULT_TEMPORAL = param_df.loc[DEFAULT_ID, "temporal"]
+DEFAULT_WMS_URL = param_df.loc[DEFAULT_ID, "wms_nrt"]
+DEFAULT_OPENDAP_URL = param_df.loc[DEFAULT_ID, "opendap_nrt"]
+DEFAULT_VALUE_RANGE = list(map(int, param_df.loc[DEFAULT_ID, "value_range"].split(",")))
+
+TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+
+TODAY = datetime.today()
 
 
 def get_wms_info(wms_url, layer_name):
@@ -63,36 +84,178 @@ def generate_time_list(times):
     return sorted(map(lambda x: x.replace(tzinfo=None), time_range))
 
 
-param_df = pd.read_csv("data/sources.csv")
-
-DEFAULT_ID = 0
-DEFAULT_PARAM = param_df.loc[DEFAULT_ID, "parameter"]
-DEFAULT_TEMPORAL = param_df.loc[DEFAULT_ID, "temporal"]
-DEFAULT_WMS_URL = param_df.loc[DEFAULT_ID, "wms_url"]
-DEFAULT_OPENDAP_URL = param_df.loc[DEFAULT_ID, "opendap_url"]
-DEFAULT_VALUE_RANGE = list(map(int, param_df.loc[DEFAULT_ID, "value_range"].split(",")))
-
-TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-
-TODAY = datetime.today()
-
-server = Flask(__name__)
-
-app = Dash(
-    __name__,
-    server=server,
-    meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
-    suppress_callback_exceptions=True,
+param_box = html.Div(
+    className="param_box",
+    children=[
+        html.H3("Parameter"),
+        dcc.Dropdown(
+            id="dd_param",
+            options=[
+                {"value": p, "label": a}
+                for p, a in zip(param_df.parameter.unique(), param_df.title.unique())
+            ],
+            value=DEFAULT_PARAM,
+        ),
+    ],
 )
+
+
+temporal_box = html.Div(
+    className="temporal_box",
+    children=[
+        html.H3("Temporal"),
+        dcc.Dropdown(
+            id="dd_temporal",
+            options=[
+                {"value": p, "label": p.capitalize()}
+                for p in param_df.temporal.unique()
+            ],
+            value=DEFAULT_TEMPORAL,
+        ),
+    ],
+)
+
+
+value_box = html.Div(
+    className="value_box",
+    children=[
+        html.H3("Value Range"),
+        html.Div(
+            style={
+                "display": "flex",
+                "flex-direction": "row",
+                "justify-content": "space-between",
+                "align-items": "center",
+            },
+            children=[
+                html.H5("Min"),
+                dcc.Input(
+                    id="value_min",
+                    type="number",
+                    value=DEFAULT_VALUE_RANGE[0],
+                    step=0.001,
+                ),
+                html.H5("Max"),
+                dcc.Input(
+                    id="value_max",
+                    type="number",
+                    value=DEFAULT_VALUE_RANGE[1],
+                    step=0.001,
+                ),
+            ],
+        ),
+    ],
+)
+
+
+style_box = html.Div(
+    className="style_box",
+    children=[
+        html.H3("Style"),
+        dcc.Dropdown(
+            id="dd_style",
+            options=[
+                {"value": "contour", "label": "Contour"},
+            ],
+            value="contour",
+        ),
+    ],
+)
+
+
+opacity_box = html.Div(
+    className="opacity_box",
+    children=[
+        html.H3("Opacity"),
+        dcc.Slider(
+            id="opacity_slider",
+            min=0,
+            max=1,
+            step=0.1,
+            value=1,
+            marks={0: "0", 0.5: "0.5", 1: "1"},
+        ),
+    ],
+)
+
+
+x_box = html.Div(
+    className="x_box",
+    children=[
+        dcc.Input(
+            id="xmin",
+            type="number",
+            value=0,
+            step=0.001,
+        ),
+        dcc.Input(
+            id="xmax",
+            type="number",
+            value=0,
+            step=0.001,
+        ),
+    ],
+)
+
+
+ymax_box = html.Div(
+    className="ymax_box",
+    children=[
+        dcc.Input(
+            id="ymax",
+            type="number",
+            value=0,
+            step=0.001,
+        ),
+    ],
+)
+
+ymin_box = html.Div(
+    className="ymin_box",
+    children=[
+        dcc.Input(
+            id="ymin",
+            type="number",
+            value=0,
+            step=0.001,
+        ),
+    ],
+)
+
+
+bounding_box = html.Div(
+    className="bounding_box",
+    children=[ymax_box, x_box, ymin_box],
+)
+
+
+download_box = html.Div(
+    className="download_box",
+    children=[
+        html.H3("Download"),
+        html.Div(
+            className="download_menu",
+            children=[html.H5("Bounding Box"), bounding_box],
+        ),
+    ],
+)
+
 
 map_layout = dl.Map(
     id="map",
     center=[0, 116],
     zoom=5,
-    style={"width": "100%", "height": "100%", "cursor": "crosshair"},
+    style={"width": "100%", "height": "100%"},
     children=[
         dl.TileLayer(url=TILE_URL, attribution=TILE_ATTRIBUTION),
+        dl.FeatureGroup(children=[dl.EditControl(id="edit_control")]),
+        dl.MeasureControl(
+            position="topleft",
+            primaryLengthUnit="kilometers",
+            primaryAreaUnit="hectares",
+            activeColor="#214097",
+            completedColor="#972158",
+        ),
         dl.LayerGroup(
             id="wms_layers",
         ),
@@ -102,154 +265,12 @@ map_layout = dl.Map(
     ],
 )
 
+
 menu_layout = html.Div(
     className="menu_box",
-    children=[
-        html.Div(
-            className="param_box",
-            children=[
-                html.H3("Parameter"),
-                dcc.Dropdown(
-                    id="dd_param",
-                    options=[
-                        {"value": p, "label": a}
-                        for p, a in zip(
-                            param_df.parameter.unique(), param_df.title.unique()
-                        )
-                    ],
-                    value=DEFAULT_PARAM,
-                ),
-            ],
-        ),
-        html.Div(
-            className="temporal_box",
-            children=[
-                html.H3("Temporal"),
-                dcc.Dropdown(
-                    id="dd_temporal",
-                    options=[
-                        {"value": p, "label": p.capitalize()}
-                        for p in param_df.temporal.unique()
-                    ],
-                    value=DEFAULT_TEMPORAL,
-                ),
-            ],
-        ),
-        html.Div(
-            className="value_box",
-            children=[
-                html.H3("Value Range"),
-                html.Div(
-                    style={
-                        "display": "flex",
-                        "flex-direction": "row",
-                        "justify-content": "space-between",
-                        "align-items": "center",
-                    },
-                    children=[
-                        html.H5("Min"),
-                        dcc.Input(
-                            id="value_min",
-                            type="number",
-                            value=DEFAULT_VALUE_RANGE[0],
-                            step=0.001,
-                        ),
-                        html.H5("Max"),
-                        dcc.Input(
-                            id="value_max",
-                            type="number",
-                            value=DEFAULT_VALUE_RANGE[1],
-                            step=0.001,
-                        ),
-                    ],
-                ),
-            ],
-        ),
-        html.Div(
-            className="style_box",
-            children=[
-                html.H3("Style"),
-                dcc.Dropdown(
-                    id="dd_style",
-                    options=[
-                        {"value": "contour", "label": "Contour"},
-                    ],
-                    value="contour",
-                ),
-            ],
-        ),
-        html.Div(
-            className="opacity_box",
-            children=[
-                html.H3("Opacity"),
-                dcc.Slider(
-                    id="opacity_slider",
-                    min=0,
-                    max=1,
-                    step=0.1,
-                    value=1,
-                    marks={0: "0", 0.5: "0.5", 1: "1"},
-                ),
-            ],
-        ),
-        html.Div(
-            className="download_box",
-            children=[
-                html.H3("Download"),
-                html.Div(
-                    className="download_menu",
-                    children=[
-                        html.H5("Bounding Box"),
-                        html.Div(
-                            className="bounding_box",
-                            children=[
-                                html.Div(
-                                    className="ymax_box",
-                                    children=[
-                                        dcc.Input(
-                                            id="ymax",
-                                            type="number",
-                                            value=0,
-                                            step=0.001,
-                                        ),
-                                    ],
-                                ),
-                                html.Div(
-                                    className="x_box",
-                                    children=[
-                                        dcc.Input(
-                                            id="xmin",
-                                            type="number",
-                                            value=0,
-                                            step=0.001,
-                                        ),
-                                        dcc.Input(
-                                            id="xmax",
-                                            type="number",
-                                            value=0,
-                                            step=0.001,
-                                        ),
-                                    ],
-                                ),
-                                html.Div(
-                                    className="ymin_box",
-                                    children=[
-                                        dcc.Input(
-                                            id="ymin",
-                                            type="number",
-                                            value=0,
-                                            step=0.001,
-                                        ),
-                                    ],
-                                ),
-                            ],
-                        ),
-                    ],
-                ),
-            ],
-        ),
-    ],
+    children=[param_box, temporal_box, value_box, style_box, opacity_box, download_box],
 )
+
 
 depth_layout = html.Div(
     className="depth_box",
@@ -275,6 +296,7 @@ depth_layout = html.Div(
         ),
     ],
 )
+
 
 time_layout = html.Div(
     id="time_box",
@@ -314,7 +336,6 @@ def update_style_options(param):
         Output("wms_layers", "children"),
         Output("data_time", "children"),
         Output("data_depth", "children"),
-        Output("vector_layers", "children"),
     ],
     [
         Input("dd_param", "value"),
@@ -325,7 +346,6 @@ def update_style_options(param):
         Input("value_max", "value"),
         Input("opacity_slider", "value"),
         Input("dd_style", "value"),
-        Input("map", "click_lat_lng"),
     ],
 )
 def update_wms_layers(
@@ -337,14 +357,13 @@ def update_wms_layers(
     value_max,
     opacity,
     style,
-    click_lat_lng,
 ):
     end_date = datetime(1950, 1, 1) + timedelta(hours=end_time)
 
     value_range = f"{value_min},{value_max}"
 
     wms_url = param_df.query("parameter == @param and temporal == @temporal")[
-        "wms_url"
+        "wms_nrt"
     ].values[0]
 
     wms_info = get_wms_info(wms_url, param)
@@ -390,34 +409,7 @@ def update_wms_layers(
         extraProps=extraProps,
     )
 
-    if click_lat_lng:
-        xy = list(reversed(click_lat_lng))
-        info = get_feature_info(wms_url, param, xy, data_time, data_depth)
-
-        info_html = html.Ul(
-            style={"list-style": "none", "margin": "0", "padding": "0"},
-            children=[
-                html.Li([html.Strong(f"{k.capitalize()}:"), "\t", v])
-                for k, v in info.items()
-                if k != "time" or k != "elevation"
-            ],
-        )
-
-        info_marker = [
-            dl.Marker(position=click_lat_lng, children=dl.Tooltip(info_html))
-        ]
-    else:
-        info_marker = []
-
-    return ([wms_layer], f"{data_time}", depth_text, info_marker)
-
-
-@app.callback(
-    Output("wms_layer", "opacity"),
-    Input("opacity_slider", "value"),
-)
-def update_opacity(opacity):
-    return opacity
+    return ([wms_layer], f"{data_time}", depth_text)
 
 
 @app.callback(
@@ -432,7 +424,7 @@ def update_opacity(opacity):
 )
 def update_values(param, temporal):
     wms_url = param_df.query("parameter == @param and temporal == @temporal")[
-        "wms_url"
+        "wms_nrt"
     ].values[0]
 
     wms_info = get_wms_info(wms_url, param)
@@ -508,6 +500,15 @@ def update_values(param, temporal):
         {"display": depth_display},
     )
 
+
+@app.callback(
+    Output("wms_layer", "opacity"),
+    Input("opacity_slider", "value"),
+)
+def update_opacity(opacity):
+    return opacity
+
+
 @app.callback(
     [
         Output("xmin", "value"),
@@ -532,4 +533,4 @@ app.layout = html.Div(
 )
 
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    app.run_server()
