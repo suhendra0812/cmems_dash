@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import os
 
 from dateutil.relativedelta import relativedelta
 from dash import Dash, Input, Output, html, dcc
@@ -8,7 +9,6 @@ import numpy as np
 import pandas as pd
 from lxml import etree
 from shapely.geometry import Point
-
 
 app = Dash(
     __name__,
@@ -533,4 +533,4 @@ app.layout = html.Div(
 )
 
 if __name__ == "__main__":
-    app.run_server()
+    app.run(debug=None)
