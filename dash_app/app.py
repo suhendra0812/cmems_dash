@@ -1,88 +1,38 @@
+# import python builtin modules
 from datetime import datetime, timedelta
-import os
 
+# import third party modules
 from dateutil.relativedelta import relativedelta
-from dash import Dash, Input, Output, html, dcc
-import dash_leaflet as dl
-from owslib.wms import WebMapService
 import numpy as np
 import pandas as pd
-from lxml import etree
-from shapely.geometry import Point
 
+# import dash modules
+from dash import Dash, Input, Output, html, dcc
+import dash_leaflet as dl
+
+# import own modules
+from utils import generate_time_list, get_wms_info
+
+# initialize dash app
 app = Dash(
     __name__,
     meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
     suppress_callback_exceptions=True,
 )
 
-
+# read information from csv file
 param_df = pd.read_csv("data/sources.csv")
 
+# set initial state of information
 DEFAULT_ID = 0
 DEFAULT_PARAM = param_df.loc[DEFAULT_ID, "parameter"]
 DEFAULT_TEMPORAL = param_df.loc[DEFAULT_ID, "temporal"]
 DEFAULT_WMS_URL = param_df.loc[DEFAULT_ID, "wms_nrt"]
 DEFAULT_OPENDAP_URL = param_df.loc[DEFAULT_ID, "opendap_nrt"]
 DEFAULT_VALUE_RANGE = list(map(int, param_df.loc[DEFAULT_ID, "value_range"].split(",")))
-
+TODAY = datetime.today()
 TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
 TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-
-TODAY = datetime.today()
-
-
-def get_wms_info(wms_url, layer_name):
-    wms = WebMapService(wms_url, version="1.3.0")
-    item_data = {}
-    for item in wms.items():
-        key, value = item
-        item_data[key] = value
-    layer_info = item_data[layer_name]
-    return layer_info
-
-
-def get_feature_info(wms_url, layer_name, xy, time, depth=None):
-    bbox = Point(xy).buffer(1e-07).bounds
-    wms = WebMapService(wms_url, version="1.3.0")
-
-    feature_info = wms.getfeatureinfo(
-        layers=[layer_name],
-        styles=["boxfill/rainbow"],
-        srs="EPSG:4326",
-        bbox=bbox,
-        xy=(0, 0),
-        size=(1, 1),
-        info_format="text/xml",
-        time=time,
-        elevation=depth,
-    )
-
-    root = etree.fromstring(feature_info.read())
-    value = float(root.find(".//value").text)
-    longitude = float(root.find(".//longitude").text)
-    latitude = float(root.find(".//latitude").text)
-
-    info_dict = {"value": value, "longitude": longitude, "latitude": latitude}
-
-    return info_dict
-
-
-def generate_time_list(times):
-    time_range = []
-    for time in times:
-        split_time = time.split("/")
-        if len(split_time) == 1:
-            dt = pd.to_datetime(split_time[0]).to_pydatetime()
-            time_range.append(dt)
-        else:
-            start, end, freq = split_time
-            freq = freq.replace("P", "").replace("T", "")
-            date_range = pd.date_range(start, end, freq=freq).to_pydatetime()
-            time_range.extend(date_range)
-
-    return sorted(map(lambda x: x.replace(tzinfo=None), time_range))
-
 
 param_box = html.Div(
     className="param_box",
