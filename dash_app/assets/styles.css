@@ -14,7 +14,7 @@ html {
   height: 100%;
 }
 
-.menu_box {
+.menu-container {
   font: 14px/16px Arial, Helvetica, sans-serif;
   background: rgba(255, 255, 255, 0.8);
   box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
@@ -27,22 +27,12 @@ html {
   z-index: 1000;
 }
 
-.param_box,
-.temporal_box,
-.value_box,
-.opacity_box,
-.style_box,
-.download_box {
+.menu-item {
   position: relative;
   padding: 5px;
 }
 
-.param_box h3,
-.temporal_box h3,
-.value_box h3,
-.opacity_box h3,
-.style_box h3,
-.download_box h3 {
+.menu-item h3 {
   margin-bottom: 5px;
 }
 
@@ -57,6 +47,15 @@ html {
   border-radius: 4px;
   border: 1px solid #ccc;
   width: 50%;
+}
+
+#date_range input {
+  font-size: 100%;
+  padding: 5px 10px;
+}
+
+.DateInput {
+  width: auto;
 }
 
 .bounding_box {

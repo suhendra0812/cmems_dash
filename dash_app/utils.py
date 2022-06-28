@@ -1,4 +1,7 @@
+from datetime import date, datetime
+
 from lxml import etree
+import numpy as np
 from owslib.wms import WebMapService
 import pandas as pd
 from shapely.geometry import Point
@@ -40,7 +43,7 @@ def get_feature_info(wms_url, layer_name, xy, time, depth=None):
     return info_dict
 
 
-def generate_time_list(times):
+def generate_time_list(times: list[str]):
     time_range = []
     for time in times:
         split_time = time.split("/")
@@ -54,3 +57,15 @@ def generate_time_list(times):
             time_range.extend(date_range)
 
     return sorted(map(lambda x: x.replace(tzinfo=None), time_range))
+
+
+def get_timestamp(time_range: datetime):
+    timestamp_range = np.asanyarray(
+        list(
+            map(
+                lambda x: (x.date() - datetime(1950, 1, 1).date()).days * 24, time_range
+            )
+        )
+    )
+
+    return timestamp_range
