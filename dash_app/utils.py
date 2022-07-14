@@ -1,13 +1,14 @@
-from datetime import date, datetime
+from datetime import datetime
 
 from lxml import etree
 import numpy as np
 from owslib.wms import WebMapService
+from owslib.map.common import AbstractContentMetadata
 import pandas as pd
 from shapely.geometry import Point
 
 
-def get_wms_info(wms_url, layer_name):
+def get_wms_info(wms_url: str, layer_name: str) -> AbstractContentMetadata:
     wms = WebMapService(wms_url, version="1.3.0")
     item_data = {}
     for item in wms.items():
@@ -17,7 +18,9 @@ def get_wms_info(wms_url, layer_name):
     return layer_info
 
 
-def get_feature_info(wms_url, layer_name, xy, time, depth=None):
+def get_feature_info(
+    wms_url: str, layer_name: str, xy: tuple, time: datetime, depth: float = None
+) -> dict[str, float]:
     bbox = Point(xy).buffer(1e-07).bounds
     wms = WebMapService(wms_url, version="1.3.0")
 
@@ -29,7 +32,7 @@ def get_feature_info(wms_url, layer_name, xy, time, depth=None):
         xy=(0, 0),
         size=(1, 1),
         info_format="text/xml",
-        time=time,
+        time=time.strftime("%Y-%m-%dT%H:%M:%S.0Z"),
         elevation=depth,
     )
 
@@ -43,7 +46,7 @@ def get_feature_info(wms_url, layer_name, xy, time, depth=None):
     return info_dict
 
 
-def generate_time_list(times: list[str]):
+def generate_time_list(times: list[str]) -> list[datetime]:
     time_range = []
     for time in times:
         split_time = time.split("/")
@@ -59,7 +62,7 @@ def generate_time_list(times: list[str]):
     return sorted(map(lambda x: x.replace(tzinfo=None), time_range))
 
 
-def get_timestamp(time_range: datetime):
+def get_timestamp(time_range: datetime) -> np.ndarray:
     timestamp_range = np.asanyarray(
         list(
             map(

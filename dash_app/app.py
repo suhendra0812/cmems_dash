@@ -30,7 +30,10 @@ DEFAULT_PARAM = param_df.loc[DEFAULT_ID, "parameter"]
 DEFAULT_TEMPORAL = param_df.loc[DEFAULT_ID, "temporal"]
 DEFAULT_WMS_URL = param_df.loc[DEFAULT_ID, "wms_nrt"]
 DEFAULT_OPENDAP_URL = param_df.loc[DEFAULT_ID, "opendap_nrt"]
-DEFAULT_VALUE_RANGE = list(map(int, param_df.loc[DEFAULT_ID, "value_range"].split(",")))
+DEFAULT_VALUE_RANGE = [
+    float(param_df.loc[DEFAULT_ID, "value_min"]),
+    float(param_df.loc[DEFAULT_ID, "value_max"])
+]
 TODAY = datetime.today()
 TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
 TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -355,17 +358,18 @@ def update_wms_layers(
     opacity,
     style,
 ):
-    end_date = datetime(1950, 1, 1) + timedelta(hours=end_time)
-
     value_range = f"{value_min},{value_max}"
 
     selected_param_df = pd.read_json(data, orient="split")
     temporal_param_df = selected_param_df.query("temporal == @temporal")
 
     param = temporal_param_df["parameter"].values[0]
-    nrt_time = pd.to_datetime(temporal_param_df["nrt_time"].values[0])
+    nrt_date = pd.to_datetime(temporal_param_df["nrt_date"].values[0]).to_pydatetime()
+    init_date = pd.to_datetime(temporal_param_df["init_date"].values[0]).to_pydatetime()
+    
+    end_date = init_date + timedelta(hours=end_time)
 
-    if end_date < nrt_time:
+    if end_date < nrt_date:
         wms_url = temporal_param_df["wms_my"].values[0]
     else:
         wms_url = temporal_param_df["wms_nrt"].values[0]
@@ -450,12 +454,10 @@ def update_values(data, temporal, start_date, end_date):
     time_list = wms_info.dimensions["time"]["values"]
     time_range = np.asanyarray(generate_time_list(time_list))
 
-    value_range = list(
-        map(
-            float,
-            temporal_param_df["value_range"].values[0].split(","),
-        )
-    )
+    value_range = [
+        float(temporal_param_df["value_min"].values[0]),
+        float(temporal_param_df["value_max"].values[0])
+    ]
 
     timestamp_range = get_timestamp(time_range)
     today_idx = np.argmin(np.abs(time_range - current_date))
@@ -536,24 +538,49 @@ def get_bounds(bounds):
     return (xmin, xmax, ymin, ymax)
 
 
-# @app.callback(
-#     Output("test_box", "children"),
-#     Input("edit_control", "geojson"),
-#     State("feat_group", "children"),
-# )
-# def get_info(geojson, feat_group):
-#     if not geojson:
-#         raise PreventUpdate
+@app.callback(
+    Output("test_box", "children"),
+    Input("edit_control", "geojson"),
+    Input("store_param", "data"),
+    Input("temporal", "value"),
+    Input("time_slider", "value"),
+    Input("depth_slider", "value"),
+    State("feat_group", "children"),
+)
+def get_info(geojson, data, temporal, end_time, depth, feat_group):
+    if not geojson:
+        raise PreventUpdate
 
-#     info_list = []
-#     for feat in geojson["features"]:
-#         geom = feat["geometry"]
-#         geom_type = geom["type"]
-#         if geom_type == "Point":
-#             x, y = geom["coordinates"]
-#             info = get_feature_info()
+    selected_param_df = pd.read_json(data, orient="split")
+    temporal_param_df = selected_param_df.query("temporal == @temporal")
 
-#     return info_list
+    param = temporal_param_df["parameter"].values[0]
+    nrt_date = pd.to_datetime(temporal_param_df["nrt_date"].values[0]).to_pydatetime()
+    init_date = pd.to_datetime(temporal_param_df["init_date"].values[0]).to_pydatetime()
+    
+    end_date = init_date + timedelta(hours=end_time)
+
+    if end_date < nrt_date:
+        wms_url = temporal_param_df["wms_my"].values[0]
+    else:
+        wms_url = temporal_param_df["wms_nrt"].values[0]
+
+    info_list = []
+    for feat in geojson["features"]:
+        geom = feat["geometry"]
+        geom_type = geom["type"]
+        if geom_type == "Point":
+            x, y = geom["coordinates"]
+            info = get_feature_info(
+                wms_url=wms_url,
+                layer_name=param,
+                xy=(x, y),
+                time=end_date,
+                depth=depth
+            )
+            info_list.append(info)
+
+    return info_list
 
 if __name__ == "__main__":
-    app.run(debug=None)
+    app.run()
