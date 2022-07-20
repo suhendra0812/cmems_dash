@@ -1,5 +1,6 @@
 # import python builtin modules
 from datetime import datetime, timedelta
+from heapq import nsmallest
 
 # import third party modules
 from dateutil.relativedelta import relativedelta
@@ -9,10 +10,16 @@ import pandas as pd
 # import dash modules
 from dash import Dash, Input, Output, State, html, dcc
 from dash.exceptions import PreventUpdate
+from dash_extensions.javascript import Namespace
+import dash_auth
 import dash_leaflet as dl
 
 # import own modules
 from utils import generate_time_list, get_wms_info, get_feature_info, get_timestamp
+
+VALID_USERNAME_PASSWORD_PAIRS = {
+    'bpisdkp': 'bpisdkp'
+}
 
 # initialize dash app
 app = Dash(
@@ -20,9 +27,13 @@ app = Dash(
     meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
     suppress_callback_exceptions=True,
 )
+auth = dash_auth.BasicAuth(
+    app,
+    VALID_USERNAME_PASSWORD_PAIRS
+)
 
 # read information from csv file
-param_df = pd.read_csv("data/sources.csv")
+param_df = pd.read_csv("./assets/sources.csv")
 
 # set initial state of information
 DEFAULT_ID = 0
@@ -203,16 +214,17 @@ bounding_box = html.Div(
 download_box = html.Div(
     className="menu-item",
     children=[
-        html.H3("Download"),
+        html.H3("Bounding Box"),
         html.Div(
             className="download_menu",
-            children=[html.H5("Bounding Box"), bounding_box],
+            children=[bounding_box],
         ),
     ],
 )
 
 test_box = html.Div(id="menu-item")
 
+wpp_ns = Namespace("layerStyle", "wppLayerStyle")
 
 map_layout = dl.Map(
     id="map",
@@ -221,6 +233,7 @@ map_layout = dl.Map(
     style={"width": "100%", "height": "100%"},
     children=[
         dl.TileLayer(url=TILE_URL, attribution=TILE_ATTRIBUTION),
+        dl.GeoJSON(url="./assets/WPP_NRI.geojson", options=dict(style=wpp_ns("style"))),
         dl.FeatureGroup(id="feat_group", children=[dl.EditControl(id="edit_control")]),
         dl.MeasureControl(
             position="topleft",
