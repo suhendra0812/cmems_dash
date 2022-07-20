@@ -72,8 +72,8 @@ DEFAULT_WMS_URL = param_df.loc[DEFAULT_ID, "wms_url"]
 DEFAULT_OPENDAP_URL = param_df.loc[DEFAULT_ID, "opendap_url"]
 DEFAULT_VALUE_RANGE = list(map(int, param_df.loc[DEFAULT_ID, "value_range"].split(",")))
 
-TILE_URL = "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
-TILE_ATTRIBUTION = '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> '
+TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 
 TODAY = datetime.today()
 
