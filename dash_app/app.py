@@ -1,6 +1,5 @@
 # import python builtin modules
 from datetime import datetime, timedelta
-from heapq import nsmallest
 
 # import third party modules
 from dateutil.relativedelta import relativedelta
