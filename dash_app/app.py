@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 
 # import third party modules
 from dateutil.relativedelta import relativedelta
+from flask import Flask
 import numpy as np
 import pandas as pd
 
@@ -20,11 +21,15 @@ VALID_USERNAME_PASSWORD_PAIRS = {
     'bpisdkp': 'bpisdkp'
 }
 
+# initialize server
+server = Flask(__name__)
+
 # initialize dash app
 app = Dash(
     __name__,
     meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
     suppress_callback_exceptions=True,
+    server=server
 )
 auth = dash_auth.BasicAuth(
     app,
