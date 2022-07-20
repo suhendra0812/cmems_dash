@@ -1,7 +1,8 @@
-dash==2.4.1
+dash==2.5.1
 dash-leaflet==0.1.23
-pandas==1.4.2
+jupyter-dash==0.4.2
+pandas==1.4.3
 gunicorn==20.1.0
 owslib==0.25.0
-lxml==4.8.0
+lxml==4.9.0
 shapely==1.8.2
