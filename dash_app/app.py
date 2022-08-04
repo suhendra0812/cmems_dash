@@ -32,6 +32,9 @@ app = Dash(
     suppress_callback_exceptions=True,
     server=server
 )
+
+app.title = "BPISDKP Ocean Data Viewer"
+
 auth = dash_auth.BasicAuth(
     app,
     VALID_USERNAME_PASSWORD_PAIRS
