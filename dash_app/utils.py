@@ -62,11 +62,11 @@ def generate_time_list(times: list[str]) -> list[datetime]:
     return sorted(map(lambda x: x.replace(tzinfo=None), time_range))
 
 
-def get_timestamp(time_range: datetime) -> np.ndarray:
+def get_timestamp(time_range: datetime, init_date: datetime) -> np.ndarray:
     timestamp_range = np.asanyarray(
         list(
             map(
-                lambda x: (x.date() - datetime(1950, 1, 1).date()).days * 24, time_range
+                lambda x: (x.date() - init_date.date()).days * 24, time_range
             )
         )
     )

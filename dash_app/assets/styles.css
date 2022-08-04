@@ -144,7 +144,7 @@ html {
   display: none;
   padding: 10px;
   bottom: 10vh;
-  left: calc(40px + 10vh);
+  left: 10px;
   z-index: 1000;
 }
 

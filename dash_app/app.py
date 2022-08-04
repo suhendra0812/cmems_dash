@@ -466,20 +466,41 @@ def update_values(data, temporal, start_date, end_date):
     else:
         current_date = end_date
 
-    date_range = pd.date_range(start_date, end_date, freq="1D")
-    datestamp_range = get_timestamp(date_range)
-
     selected_param_df = pd.read_json(data, orient="split")
     temporal_param_df = selected_param_df.query("temporal == @temporal")
 
     param = temporal_param_df["parameter"].values[0]
-    wms_url = temporal_param_df["wms_nrt"].values[0]
     value_min = temporal_param_df["value_min"].values[0]
     value_max = temporal_param_df["value_max"].values[0]
+    nrt_date = pd.to_datetime(temporal_param_df["nrt_date"].values[0]).to_pydatetime()
+    init_date = pd.to_datetime(temporal_param_df["init_date"].values[0]).to_pydatetime()
 
-    wms_info = get_wms_info(wms_url, param)
+    date_range = pd.date_range(start_date, end_date, freq="1D")
+    datestamp_range = get_timestamp(date_range, init_date)
 
-    time_list = wms_info.dimensions["time"]["values"]
+    wms_urls = []
+    if end_date < nrt_date:
+        wms_urls.append(
+            temporal_param_df["wms_my"].values[0]
+        )
+    elif start_date >= nrt_date:
+        wms_urls.append(
+            temporal_param_df["wms_nrt"].values[0]
+        )
+    else:
+        wms_urls.append(
+            temporal_param_df["wms_my"].values[0]
+        )
+        wms_urls.append(
+            temporal_param_df["wms_nrt"].values[0]
+        )
+
+    time_list = []
+    for wms_url in wms_urls:
+        wms_info = get_wms_info(wms_url, param)
+        times = wms_info.dimensions["time"]["values"]
+        time_list.extend(times)
+
     time_range = np.asanyarray(generate_time_list(time_list))
 
     value_range = [
@@ -487,17 +508,17 @@ def update_values(data, temporal, start_date, end_date):
         float(temporal_param_df["value_max"].values[0])
     ]
 
-    timestamp_range = get_timestamp(time_range)
+    timestamp_range = get_timestamp(time_range, init_date)
     today_idx = np.argmin(np.abs(time_range - current_date))
     today_timestamp = timestamp_range[today_idx]
 
-    start_time_mark = start_date - relativedelta(months=3)
-    end_time_mark = end_date + relativedelta(months=3)
+    start_time_mark = start_date - relativedelta(months=1)
+    end_time_mark = end_date + relativedelta(months=1)
 
     time_marks = {}
     start_year = time_range[0].year
     for v in pd.date_range(start_time_mark, end_time_mark, periods=12):
-        time_stamp = (v.date() - datetime(1950, 1, 1).date()).days * 24
+        time_stamp = (v.date() - init_date.date()).days * 24
         if v.year == start_year:
             time_marks[time_stamp] = v.strftime("%B")
         else:
@@ -527,8 +548,10 @@ def update_values(data, temporal, start_date, end_date):
     ]
 
     depth_display = None
+    legend_left = "10px"
     if not param in ["ZSD", "VHM0"]:
         depth_display = "block"
+        legend_left = "calc(40px + 10vh)"
 
     legend_params = dict(
         request="GetLegendGraphic",
@@ -555,7 +578,7 @@ def update_values(data, temporal, start_date, end_date):
         {"display": "block"},
         time_box,
         {"display": depth_display},
-        {"display": "block"},
+        {"display": "block", "left": legend_left},
         legend_box
     )
 
