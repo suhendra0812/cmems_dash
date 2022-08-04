@@ -366,6 +366,8 @@ def update_style_options(param):
     Output("wms_layers", "children"),
     Output("data_time", "children"),
     Output("data_depth", "children"),
+    Output("legend_box", "style"),
+    Output("legend_box", "children"),
     Input("store_param", "data"),
     Input("dd_temporal", "value"),
     Input("time_slider", "value"),
@@ -421,6 +423,7 @@ def update_wms_layers(
     }
 
     depth_text = None
+    legend_left = "10px"
 
     if not param in ["ZSD", "VHM0"]:
         elevation_values = wms_info.dimensions["elevation"]["values"]
@@ -431,6 +434,27 @@ def update_wms_layers(
 
         extraProps["elevation"] = data_depth
         depth_text = f"{round(data_depth, 1)} {elevation_unit}"
+
+        legend_left = "calc(40px + 10vh)"
+
+    legend_params = dict(
+        request="GetLegendGraphic",
+        layer=param,
+        colorscalerange=f"{value_min},{value_max}"
+    )
+
+    legend_res = requests.get(wms_url, params=legend_params)
+
+    legend_box = [
+        html.Div(
+            id="data_legend",
+            children=[
+                html.Img(
+                    src=legend_res.url
+                )
+            ]
+        )
+    ]
 
     wms_layer = dl.WMSTileLayer(
         id="wms_layer",
@@ -444,7 +468,13 @@ def update_wms_layers(
         extraProps=extraProps,
     )
 
-    return ([wms_layer], f"{data_time}", depth_text)
+    return (
+        [wms_layer],
+        f"{data_time}",
+        depth_text,
+        {"display": "block", "left": legend_left},
+        legend_box
+    )
 
 
 @app.callback(
@@ -453,12 +483,10 @@ def update_wms_layers(
     Output("time_box", "style"),
     Output("time_box", "children"),
     Output("depth_box", "style"),
-    Output("legend_box", "style"),
-    Output("legend_box", "children"),
     Input("store_param", "data"),
     Input("dd_temporal", "value"),
     Input("date_range", "start_date"),
-    Input("date_range", "end_date"),
+    Input("date_range", "end_date")
 )
 def update_values(data, temporal, start_date, end_date):
     start_date = pd.to_datetime(start_date).to_pydatetime()
@@ -551,38 +579,16 @@ def update_values(data, temporal, start_date, end_date):
     ]
 
     depth_display = None
-    legend_left = "10px"
     if not param in ["ZSD", "VHM0"]:
         depth_display = "block"
-        legend_left = "calc(40px + 10vh)"
 
-    legend_params = dict(
-        request="GetLegendGraphic",
-        layer=param,
-        colorscalerange=f"{value_min},{value_max}"
-    )
-
-    legend_res = requests.get(wms_url, params=legend_params)
-
-    legend_box = [
-        html.Div(
-            id="data_legend",
-            children=[
-                html.Img(
-                    src=legend_res.url
-                )
-            ]
-        )
-    ]
 
     return (
         value_range[0],
         value_range[1],
         {"display": "block"},
         time_box,
-        {"display": depth_display},
-        {"display": "block", "left": legend_left},
-        legend_box
+        {"display": depth_display}
     )
 
 
