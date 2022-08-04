@@ -13,6 +13,7 @@ from dash.exceptions import PreventUpdate
 from dash_extensions.javascript import Namespace
 import dash_auth
 import dash_leaflet as dl
+import requests
 
 # import own modules
 from utils import generate_time_list, get_wms_info, get_feature_info, get_timestamp
@@ -302,12 +303,18 @@ time_layout = html.Div(
     className="time_box",
 )
 
+legend_layout = html.Div(
+    id="legend_box",
+    className="legend_box"
+)
+
 app.layout = html.Div(
     style={"display": "grid", "width": "100%", "height": "100vh"},
     children=[
         map_layout,
         menu_layout,
         depth_layout,
+        legend_layout,
         time_layout,
         dcc.Store(id="store_param"),
     ],
@@ -443,6 +450,8 @@ def update_wms_layers(
     Output("time_box", "style"),
     Output("time_box", "children"),
     Output("depth_box", "style"),
+    Output("legend_box", "style"),
+    Output("legend_box", "children"),
     Input("store_param", "data"),
     Input("dd_temporal", "value"),
     Input("date_range", "start_date"),
@@ -465,6 +474,8 @@ def update_values(data, temporal, start_date, end_date):
 
     param = temporal_param_df["parameter"].values[0]
     wms_url = temporal_param_df["wms_nrt"].values[0]
+    value_min = temporal_param_df["value_min"].values[0]
+    value_max = temporal_param_df["value_max"].values[0]
 
     wms_info = get_wms_info(wms_url, param)
 
@@ -519,12 +530,33 @@ def update_values(data, temporal, start_date, end_date):
     if not param in ["ZSD", "VHM0"]:
         depth_display = "block"
 
+    legend_params = dict(
+        request="GetLegendGraphic",
+        layer=param,
+        colorscalerange=f"{value_min},{value_max}"
+    )
+
+    legend_res = requests.get(wms_url, params=legend_params)
+
+    legend_box = [
+        html.Div(
+            id="data_legend",
+            children=[
+                html.Img(
+                    src=legend_res.url
+                )
+            ]
+        )
+    ]
+
     return (
         value_range[0],
         value_range[1],
         {"display": "block"},
         time_box,
         {"display": depth_display},
+        {"display": "block"},
+        legend_box
     )
 
 

@@ -138,6 +138,16 @@ html {
   padding: 10px;
 }
 
+.legend_box {
+  width: 10vh;
+  position: absolute;
+  display: none;
+  padding: 10px;
+  bottom: 10vh;
+  left: calc(40px + 10vh);
+  z-index: 1000;
+}
+
 ._dash-loading {
   margin: auto;
   color: transparent;
