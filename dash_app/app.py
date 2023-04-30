@@ -1,26 +1,30 @@
 # import python builtin modules
+import os
 from datetime import datetime, timedelta
 
 # import third party modules
-from dateutil.relativedelta import relativedelta
-from flask import Flask
-import numpy as np
-import pandas as pd
-
-# import dash modules
-from dash import Dash, Input, Output, State, html, dcc
-from dash.exceptions import PreventUpdate
-from dash_extensions.javascript import Namespace
 import dash_auth
 import dash_leaflet as dl
+import numpy as np
+import pandas as pd
 import requests
+from dash import Dash, Input, Output, State, dcc, html
+from dash.exceptions import PreventUpdate
+from dash_extensions.javascript import Namespace
+from dateutil.relativedelta import relativedelta
+from dotenv import load_dotenv
+from flask import Flask
 
 # import own modules
-from utils import generate_time_list, get_wms_info, get_feature_info, get_timestamp
+from utils import generate_time_list, get_feature_info, get_timestamp, get_wms_info
 
-VALID_USERNAME_PASSWORD_PAIRS = {
-    'bpisdkp': 'bpisdkp'
-}
+load_dotenv()
+
+USERNAME = os.getenv("USER")
+PASSWORD = os.getenv("PASSWORD")
+TITLE = os.getenv("TITLE")
+
+VALID_USERNAME_PASSWORD_PAIRS = {USERNAME: PASSWORD}
 
 # initialize server
 server = Flask(__name__)
@@ -30,15 +34,12 @@ app = Dash(
     __name__,
     meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
     suppress_callback_exceptions=True,
-    server=server
+    server=server,
 )
 
-app.title = "BPISDKP Ocean Data Viewer"
+app.title = TITLE
 
-auth = dash_auth.BasicAuth(
-    app,
-    VALID_USERNAME_PASSWORD_PAIRS
-)
+auth = dash_auth.BasicAuth(app, VALID_USERNAME_PASSWORD_PAIRS)
 
 # read information from csv file
 param_df = pd.read_csv("./assets/sources.csv")
@@ -51,7 +52,7 @@ DEFAULT_WMS_URL = param_df.loc[DEFAULT_ID, "wms_nrt"]
 DEFAULT_OPENDAP_URL = param_df.loc[DEFAULT_ID, "opendap_nrt"]
 DEFAULT_VALUE_RANGE = [
     float(param_df.loc[DEFAULT_ID, "value_min"]),
-    float(param_df.loc[DEFAULT_ID, "value_max"])
+    float(param_df.loc[DEFAULT_ID, "value_max"]),
 ]
 TODAY = datetime.today()
 TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -306,10 +307,7 @@ time_layout = html.Div(
     className="time_box",
 )
 
-legend_layout = html.Div(
-    id="legend_box",
-    className="legend_box"
-)
+legend_layout = html.Div(id="legend_box", className="legend_box")
 
 app.layout = html.Div(
     style={"display": "grid", "width": "100%", "height": "100vh"},
@@ -395,7 +393,7 @@ def update_wms_layers(
     param = temporal_param_df["parameter"].values[0]
     nrt_date = pd.to_datetime(temporal_param_df["nrt_date"].values[0]).to_pydatetime()
     init_date = pd.to_datetime(temporal_param_df["init_date"].values[0]).to_pydatetime()
-    
+
     end_date = init_date + timedelta(hours=end_time)
 
     if end_date < nrt_date:
@@ -440,21 +438,12 @@ def update_wms_layers(
     legend_params = dict(
         request="GetLegendGraphic",
         layer=param,
-        colorscalerange=f"{value_min},{value_max}"
+        colorscalerange=f"{value_min},{value_max}",
     )
 
     legend_res = requests.get(wms_url, params=legend_params)
 
-    legend_box = [
-        html.Div(
-            id="data_legend",
-            children=[
-                html.Img(
-                    src=legend_res.url
-                )
-            ]
-        )
-    ]
+    legend_box = [html.Div(id="data_legend", children=[html.Img(src=legend_res.url)])]
 
     wms_layer = dl.WMSTileLayer(
         id="wms_layer",
@@ -473,7 +462,7 @@ def update_wms_layers(
         f"{data_time}",
         depth_text,
         {"display": "block", "left": legend_left},
-        legend_box
+        legend_box,
     )
 
 
@@ -486,7 +475,7 @@ def update_wms_layers(
     Input("store_param", "data"),
     Input("dd_temporal", "value"),
     Input("date_range", "start_date"),
-    Input("date_range", "end_date")
+    Input("date_range", "end_date"),
 )
 def update_values(data, temporal, start_date, end_date):
     start_date = pd.to_datetime(start_date).to_pydatetime()
@@ -511,20 +500,12 @@ def update_values(data, temporal, start_date, end_date):
 
     wms_urls = []
     if end_date < nrt_date:
-        wms_urls.append(
-            temporal_param_df["wms_my"].values[0]
-        )
+        wms_urls.append(temporal_param_df["wms_my"].values[0])
     elif start_date >= nrt_date:
-        wms_urls.append(
-            temporal_param_df["wms_nrt"].values[0]
-        )
+        wms_urls.append(temporal_param_df["wms_nrt"].values[0])
     else:
-        wms_urls.append(
-            temporal_param_df["wms_my"].values[0]
-        )
-        wms_urls.append(
-            temporal_param_df["wms_nrt"].values[0]
-        )
+        wms_urls.append(temporal_param_df["wms_my"].values[0])
+        wms_urls.append(temporal_param_df["wms_nrt"].values[0])
 
     time_list = []
     for wms_url in wms_urls:
@@ -536,7 +517,7 @@ def update_values(data, temporal, start_date, end_date):
 
     value_range = [
         float(temporal_param_df["value_min"].values[0]),
-        float(temporal_param_df["value_max"].values[0])
+        float(temporal_param_df["value_max"].values[0]),
     ]
 
     timestamp_range = get_timestamp(time_range, init_date)
@@ -582,13 +563,12 @@ def update_values(data, temporal, start_date, end_date):
     if not param in ["ZSD", "VHM0"]:
         depth_display = "block"
 
-
     return (
         value_range[0],
         value_range[1],
         {"display": "block"},
         time_box,
-        {"display": depth_display}
+        {"display": depth_display},
     )
 
 
@@ -610,7 +590,7 @@ def update_opacity(opacity):
 def get_bounds(bounds):
     if not bounds:
         raise PreventUpdate
-        
+
     ((ymin, xmin), (ymax, xmax)) = bounds
     xmin = round(xmin, 3)
     xmax = round(xmax, 3)
@@ -638,7 +618,7 @@ def get_info(geojson, data, temporal, end_time, depth, feat_group):
     param = temporal_param_df["parameter"].values[0]
     nrt_date = pd.to_datetime(temporal_param_df["nrt_date"].values[0]).to_pydatetime()
     init_date = pd.to_datetime(temporal_param_df["init_date"].values[0]).to_pydatetime()
-    
+
     end_date = init_date + timedelta(hours=end_time)
 
     if end_date < nrt_date:
@@ -653,15 +633,12 @@ def get_info(geojson, data, temporal, end_time, depth, feat_group):
         if geom_type == "Point":
             x, y = geom["coordinates"]
             info = get_feature_info(
-                wms_url=wms_url,
-                layer_name=param,
-                xy=(x, y),
-                time=end_date,
-                depth=depth
+                wms_url=wms_url, layer_name=param, xy=(x, y), time=end_date, depth=depth
             )
             info_list.append(info)
 
     return info_list
+
 
 if __name__ == "__main__":
     app.run()
