@@ -1,10 +1,10 @@
 from datetime import datetime
 
-from lxml import etree
 import numpy as np
-from owslib.wms import WebMapService
-from owslib.map.common import AbstractContentMetadata
 import pandas as pd
+from lxml import etree
+from owslib.map.common import AbstractContentMetadata
+from owslib.wms import WebMapService
 from shapely.geometry import Point
 
 
@@ -64,11 +64,7 @@ def generate_time_list(times: list[str]) -> list[datetime]:
 
 def get_timestamp(time_range: datetime, init_date: datetime) -> np.ndarray:
     timestamp_range = np.asanyarray(
-        list(
-            map(
-                lambda x: (x.date() - init_date.date()).days * 24, time_range
-            )
-        )
+        list(map(lambda x: (x.date() - init_date.date()).days * 24, time_range))
     )
 
     return timestamp_range
