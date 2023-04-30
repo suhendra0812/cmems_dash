@@ -6,10 +6,15 @@ services:
     container_name: dash_app
     restart: always
     build: ./dash_app
+    env_file:
+      - ./dash_app/.env
+    environment:
+      - USER=${USER}
+      - PASSWORD=${PASSWORD}
+      - TITLE=${TITLE}
     ports:
       - "8050:8050"
     command: gunicorn -w 3 -b :8050 app:server
-
 
   nginx:
     container_name: nginx
