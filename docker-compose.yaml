@@ -9,9 +9,9 @@ services:
     env_file:
       - ./dash_app/.env
     environment:
-      - USER=${USER}
-      - PASSWORD=${PASSWORD}
-      - TITLE=${TITLE}
+      - APP_USER=${APP_USER}
+      - APP_PASSWORD=${APP_PASSWORD}
+      - APP_TITLE=${APP_TITLE}
     ports:
       - "8050:8050"
     command: gunicorn -w 3 -b :8050 app:server

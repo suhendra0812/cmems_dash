@@ -20,9 +20,9 @@ from utils import generate_time_list, get_feature_info, get_timestamp, get_wms_i
 
 load_dotenv()
 
-USERNAME = os.getenv("USER")
-PASSWORD = os.getenv("PASSWORD")
-TITLE = os.getenv("TITLE")
+USERNAME = os.getenv("APP_USER")
+PASSWORD = os.getenv("APP_PASSWORD")
+TITLE = os.getenv("APP_TITLE")
 
 VALID_USERNAME_PASSWORD_PAIRS = {USERNAME: PASSWORD}
 
