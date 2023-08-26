@@ -1,5 +1,5 @@
 dash==2.5.1
-dash-auth==1.4.1
+dash-auth==2.0.0
 dash-extensions==0.1.5
 dash-leaflet==0.1.23
 jupyter-dash==0.4.2
